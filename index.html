@@ -1,53 +1,65 @@
 <!DOCTYPE html>
 <html lang="pl">
 <head>
-  <meta charset="UTF-8">
-  <title>Licznik kliknięć</title>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Damian ma rację</title>
   <style>
     body {
-      background: #111;
-      color: white;
-      font-family: sans-serif;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
+      margin: 0;
+      font-family: Arial, sans-serif;
+      scroll-behavior: smooth;
+    }
+
+    .container {
       height: 100vh;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      flex-direction: column;
+      background-color: #e0f7fa;
     }
 
     button {
-      padding: 15px 30px;
-      font-size: 24px;
-      background: teal;
+      padding: 15px 25px;
+      font-size: 1.2rem;
+      background-color: #00796b;
       color: white;
       border: none;
-      border-radius: 10px;
+      border-radius: 8px;
       cursor: pointer;
-      margin-bottom: 20px;
+      transition: background-color 0.3s;
     }
 
-    #counter {
-      font-size: 32px;
-      font-weight: bold;
+    button:hover {
+      background-color: #004d40;
+    }
+
+    #target {
+      height: 100vh;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      background-color: #fce4ec;
+    }
+
+    #target h1 {
+      font-size: 3rem;
+      color: #880e4f;
     }
   </style>
 </head>
 <body>
 
-  <button id="clickButton">Kliknij mnie</button>
-  <div id="counter">Liczba kliknięć: 0</div>
+  <div class="container">
+    <button onclick="document.getElementById('target').scrollIntoView({ behavior: 'smooth' });">
+      Kliknij mnie
+    </button>
+  </div>
 
-  <script>
-    let count = 0;
-    const counterDisplay = document.getElementById('counter');
-    const button = document.getElementById('clickButton');
-
-    button.addEventListener('click', () => {
-      count++;
-      counterDisplay.textContent = `Liczba kliknięć: ${count}`;
-    });
-  </script>
+  <div id="target">
+    <h1>Damian zawsze ma rację</h1>
+  </div>
 
 </body>
 </html>
-
