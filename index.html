@@ -2,41 +2,166 @@
 <html lang="pl">
 <head>
   <meta charset="UTF-8" />
-  <title>Róża i Serduszko</title>
+  <title>Ruletka z obstawianiem</title>
   <style>
     body {
       margin: 0;
-      height: 100vh;
-      background: #222;
-      display: flex;
-      justify-content: center;
-      align-items: center;
+      background: #111;
       color: white;
-      font-size: 5rem;
-      user-select: none;
-      cursor: pointer;
       font-family: sans-serif;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      height: 100vh;
     }
+
+    #wheel {
+      width: 300px;
+      height: 300px;
+      border-radius: 50%;
+      border: 10px solid gold;
+      position: relative;
+      background: radial-gradient(circle, #222, #000);
+      margin-bottom: 20px;
+    }
+
+    #pointer {
+      width: 0;
+      height: 0;
+      border-left: 20px solid transparent;
+      border-right: 20px solid transparent;
+      border-bottom: 30px solid red;
+      position: absolute;
+      top: -30px;
+      left: 50%;
+      transform: translateX(-50%);
+    }
+
+    .number {
+      position: absolute;
+      width: 100%;
+      height: 100%;
+      transform-origin: 50% 50%;
+      text-align: center;
+      line-height: 280px;
+      font-size: 14px;
+    }
+
+    #controls {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 20px;
+    }
+
+    input {
+      padding: 8px;
+      font-size: 16px;
+      width: 150px;
+      text-align: center;
+    }
+
+    button {
+      padding: 10px 30px;
+      font-size: 18px;
+      background: red;
+      border: none;
+      color: white;
+      border-radius: 10px;
+      cursor: pointer;
+    }
+
+    #result, #balance {
+      font-size: 20px;
+      margin-top: 10px;
+    }
+
   </style>
 </head>
 <body>
-  <div id="emoji">Kliknij</div>
+
+  <div id="wheel">
+    <div id="pointer"></div>
+  </div>
+
+  <div id="controls">
+    <input type="number" id="betNumber" min="0" max="36" placeholder="Liczba (0–36)" />
+    <input type="number" id="betAmount" min="1" placeholder="Stawka (np. 100)" />
+    <button id="spin">Zakręć</button>
+    <div id="balance">Saldo: 1000 zł</div>
+    <div id="result">Obstaw i zakręć!</div>
+  </div>
 
   <script>
-    const emoji = document.getElementById('emoji');
-    let state = 0;
+    const wheel = document.getElementById('wheel');
+    const result = document.getElementById('result');
+    const balanceDisplay = document.getElementById('balance');
+    const spinBtn = document.getElementById('spin');
+    const betNumberInput = document.getElementById('betNumber');
+    const betAmountInput = document.getElementById('betAmount');
 
-    document.body.addEventListener('click', () => {
-      state++;
-      if (state === 1) {
-        emoji.textContent = '🌹';
-      } else if (state === 2) {
-        emoji.textContent = '❤️';
-      } else {
-        emoji.textContent = 'Kliknij';
-        state = 0;
+    const numbers = Array.from({length: 37}, (_, i) => i);
+    const anglePerNumber = 360 / numbers.length;
+    let balance = 1000;
+    let currentAngle = 0;
+
+    // Dodaj liczby do koła
+    numbers.forEach((num, i) => {
+      const el = document.createElement('div');
+      el.className = 'number';
+      el.style.transform = `rotate(${i * anglePerNumber}deg)`;
+      el.textContent = num;
+      wheel.appendChild(el);
+    });
+
+    spinBtn.addEventListener('click', () => {
+      const betNum = parseInt(betNumberInput.value);
+      const betAmount = parseInt(betAmountInput.value);
+
+      if (isNaN(betNum) || betNum < 0 || betNum > 36) {
+        result.textContent = '❌ Podaj poprawną liczbę (0–36).';
+        return;
       }
+
+      if (isNaN(betAmount) || betAmount <= 0) {
+        result.textContent = '❌ Podaj poprawną stawkę.';
+        return;
+      }
+
+      if (betAmount > balance) {
+        result.textContent = '❌ Za mało środków.';
+        return;
+      }
+
+      // Losuj wynik
+      const chosenIndex = Math.floor(Math.random() * numbers.length);
+      const rotation = 360 * 5 + (360 - chosenIndex * anglePerNumber);
+      currentAngle += rotation;
+
+      wheel.style.transition = 'transform 4s ease-out';
+      wheel.style.transform = `rotate(${currentAngle}deg)`;
+
+      result.textContent = '🎲 Kręcimy...';
+      spinBtn.disabled = true;
+
+      setTimeout(() => {
+        const resultNum = numbers[chosenIndex];
+        if (resultNum === betNum) {
+          const win = betAmount * 35;
+          balance += win;
+          result.textContent = `🎉 Trafiłeś ${resultNum}! Wygrywasz ${win} zł!`;
+        } else {
+          balance -= betAmount;
+          result.textContent = `💔 Wypadło ${resultNum}. Przegrywasz ${betAmount} zł.`;
+        }
+
+        balanceDisplay.textContent = `Saldo: ${balance} zł`;
+        spinBtn.disabled = false;
+      }, 4000);
     });
   </script>
+
 </body>
 </html>
