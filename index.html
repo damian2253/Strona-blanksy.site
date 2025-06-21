@@ -1,11 +1,10 @@
 <!DOCTYPE html>
 <html lang="pl">
 <head>
-  <meta charset="UTF-8" />
-  <title>Ruletka z obstawianiem</title>
+  <meta charset="UTF-8">
+  <title>Licznik kliknięć</title>
   <style>
     body {
-      margin: 0;
       background: #111;
       color: white;
       font-family: sans-serif;
@@ -16,193 +15,39 @@
       height: 100vh;
     }
 
-    #wheel {
-      width: 300px;
-      height: 300px;
-      border-radius: 50%;
-      border: 10px solid gold;
-      position: relative;
-      background: radial-gradient(circle, #222, #000);
-      margin-bottom: 20px;
-      overflow: hidden;
-    }
-
-    #pointer {
-      width: 0;
-      height: 0;
-      border-left: 20px solid transparent;
-      border-right: 20px solid transparent;
-      border-bottom: 30px solid red;
-      position: absolute;
-      top: -30px;
-      left: 50%;
-      transform: translateX(-50%);
-      z-index: 10;
-    }
-
-    #centerLabel {
-      position: absolute;
-      top: 50%;
-      left: 50%;
-      transform: translate(-50%, -50%);
-      font-size: 32px;
-      color: white;
-      font-weight: bold;
-      z-index: 20;
-    }
-
-    .number {
-      position: absolute;
-      width: 100%;
-      height: 100%;
-      transform-origin: 50% 50%;
-      text-align: center;
-      line-height: 280px;
-      font-size: 20px;
-      font-weight: bold;
-      color: white;
-      text-shadow: 0 0 3px black;
-    }
-
-    #controls {
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      gap: 10px;
-      margin-bottom: 20px;
-    }
-
-    input, select {
-      padding: 8px;
-      font-size: 16px;
-      width: 150px;
-      text-align: center;
-    }
-
     button {
-      padding: 10px 30px;
-      font-size: 18px;
-      background: red;
-      border: none;
+      padding: 15px 30px;
+      font-size: 24px;
+      background: teal;
       color: white;
+      border: none;
       border-radius: 10px;
       cursor: pointer;
+      margin-bottom: 20px;
     }
 
-    #result, #balance {
-      font-size: 20px;
-      margin-top: 10px;
+    #counter {
+      font-size: 32px;
+      font-weight: bold;
     }
   </style>
 </head>
 <body>
 
-  <div id="wheel">
-    <div id="pointer"></div>
-    <div id="centerLabel"></div>
-  </div>
-
-  <div id="controls">
-    <input type="number" id="betNumber" min="0" max="36" placeholder="Liczba (0–36)" />
-    <select id="betColor">
-      <option value="">Kolor (opcjonalnie)</option>
-      <option value="red">Czerwony</option>
-      <option value="black">Czarny</option>
-    </select>
-    <input type="number" id="betAmount" min="1" placeholder="Stawka (np. 100)" />
-    <button id="spin">Zakręć</button>
-    <div id="balance">Saldo: 1000 zł</div>
-    <div id="result">Obstaw i zakręć!</div>
-  </div>
+  <button id="clickButton">Kliknij mnie</button>
+  <div id="counter">Liczba kliknięć: 0</div>
 
   <script>
-    const wheel = document.getElementById('wheel');
-    const result = document.getElementById('result');
-    const balanceDisplay = document.getElementById('balance');
-    const spinBtn = document.getElementById('spin');
-    const betNumberInput = document.getElementById('betNumber');
-    const betColorInput = document.getElementById('betColor');
-    const betAmountInput = document.getElementById('betAmount');
-    const centerLabel = document.getElementById('centerLabel');
+    let count = 0;
+    const counterDisplay = document.getElementById('counter');
+    const button = document.getElementById('clickButton');
 
-    const numbers = Array.from({ length: 37 }, (_, i) => i);
-    const anglePerNumber = 360 / numbers.length;
-    let balance = 1000;
-    let currentAngle = 0;
-
-    // Przypisanie kolorów do liczb (wg standardowej ruletki)
-    const redNumbers = [1,3,5,7,9,12,14,16,18,19,21,23,25,27,30,32,34,36];
-    const numberColors = numbers.map(num => redNumbers.includes(num) ? 'red' : (num === 0 ? 'green' : 'black'));
-
-    // Dodaj liczby do koła
-    numbers.forEach((num, i) => {
-      const el = document.createElement('div');
-      el.className = 'number';
-      el.style.transform = `rotate(${i * anglePerNumber}deg)`;
-      el.textContent = num;
-      wheel.appendChild(el);
-    });
-
-    spinBtn.addEventListener('click', () => {
-      const betNum = parseInt(betNumberInput.value);
-      const betColor = betColorInput.value;
-      const betAmount = parseInt(betAmountInput.value);
-
-      if ((isNaN(betNum) || betNum < 0 || betNum > 36) && betColor === "") {
-        result.textContent = '❌ Podaj poprawną liczbę (0–36) lub wybierz kolor.';
-        return;
-      }
-
-      if (isNaN(betAmount) || betAmount <= 0) {
-        result.textContent = '❌ Podaj poprawną stawkę.';
-        return;
-      }
-
-      if (betAmount > balance) {
-        result.textContent = '❌ Za mało środków.';
-        return;
-      }
-
-      const chosenIndex = Math.floor(Math.random() * numbers.length);
-      const resultNum = numbers[chosenIndex];
-      const resultColor = numberColors[chosenIndex];
-
-      const rotation = 360 * 5 - chosenIndex * anglePerNumber;
-      currentAngle += rotation;
-
-      wheel.style.transition = 'transform 4s ease-out';
-      wheel.style.transform = `rotate(${currentAngle}deg)`;
-      centerLabel.textContent = ''; // wyczyść
-
-      result.textContent = '🎲 Kręcimy...';
-      spinBtn.disabled = true;
-
-      setTimeout(() => {
-        centerLabel.textContent = resultNum;
-        let won = false;
-        let payout = 0;
-
-        if (!isNaN(betNum) && betNum === resultNum) {
-          payout = betAmount * 35;
-          won = true;
-        } else if (betColor && betColor === resultColor) {
-          payout = betAmount * 2;
-          won = true;
-        }
-
-        if (won) {
-          balance += payout;
-          result.textContent = `🎉 Wypadło ${resultNum} (${resultColor})! Wygrywasz ${payout} zł!`;
-        } else {
-          balance -= betAmount;
-          result.textContent = `💔 Wypadło ${resultNum} (${resultColor}). Przegrywasz ${betAmount} zł.`;
-        }
-
-        balanceDisplay.textContent = `Saldo: ${balance} zł`;
-        spinBtn.disabled = false;
-      }, 4000);
+    button.addEventListener('click', () => {
+      count++;
+      counterDisplay.textContent = `Liczba kliknięć: ${count}`;
     });
   </script>
 
 </body>
 </html>
+
