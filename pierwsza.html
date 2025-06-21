@@ -1,155 +1,42 @@
 <!DOCTYPE html>
 <html lang="pl">
 <head>
-<meta charset="UTF-8" />
-<title>Flappy Bird - Prosty Klon</title>
-<style>
-  body {
-    margin: 0;
-    overflow: hidden;
-    background: #70c5ce;
-  }
-  canvas {
-    display: block;
-    margin: 0 auto;
-    background: #70c5ce;
-  }
-</style>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>SIMEA</title>
+  <style>
+    body {
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+      margin: 0;
+      background-color: #f0f0f0;
+      font-family: Arial, sans-serif;
+    }
+    h1 {
+      font-size: 8rem;
+      color: #333;
+      margin-bottom: 40px;
+    }
+    button {
+      font-size: 2rem;
+      padding: 15px 40px;
+      cursor: pointer;
+      background-color: #007bff;
+      color: white;
+      border: none;
+      border-radius: 8px;
+      transition: background-color 0.3s ease;
+    }
+    button:hover {
+      background-color: #0056b3;
+    }
+  </style>
 </head>
 <body>
-<canvas id="game" width="400" height="600"></canvas>
-
-<script>
-  const canvas = document.getElementById('game');
-  const ctx = canvas.getContext('2d');
-
-  const bird = {
-    x: 50,
-    y: 150,
-    width: 34,
-    height: 24,
-    gravity: 0.6,
-    lift: -10,
-    velocity: 0,
-  };
-
-  const pipes = [];
-  const pipeWidth = 60;
-  const pipeGap = 150;
-  let frameCount = 0;
-  let score = 0;
-  let gameOver = false;
-
-  function reset() {
-    bird.y = 150;
-    bird.velocity = 0;
-    pipes.length = 0;
-    score = 0;
-    frameCount = 0;
-    gameOver = false;
-  }
-
-  function drawBird() {
-    ctx.fillStyle = 'yellow';
-    ctx.fillRect(bird.x, bird.y, bird.width, bird.height);
-    ctx.strokeStyle = 'orange';
-    ctx.strokeRect(bird.x, bird.y, bird.width, bird.height);
-  }
-
-  function drawPipes() {
-    ctx.fillStyle = 'green';
-    pipes.forEach(pipe => {
-      // górna rura
-      ctx.fillRect(pipe.x, 0, pipeWidth, pipe.top);
-      // dolna rura
-      ctx.fillRect(pipe.x, pipe.top + pipeGap, pipeWidth, canvas.height - pipe.top - pipeGap);
-    });
-  }
-
-  function drawScore() {
-    ctx.fillStyle = 'white';
-    ctx.font = '24px Arial';
-    ctx.fillText(`Wynik: ${score}`, 10, 30);
-  }
-
-  function update() {
-    if (gameOver) return;
-
-    // Dodaj grawitację
-    bird.velocity += bird.gravity;
-    bird.y += bird.velocity;
-
-    // Dodaj nowe rury co 90 klatek (~1.5s)
-    if (frameCount % 90 === 0) {
-      const topHeight = Math.random() * (canvas.height - pipeGap - 100) + 50;
-      pipes.push({x: canvas.width, top: topHeight});
-    }
-
-    // Przesuwaj rury
-    pipes.forEach(pipe => {
-      pipe.x -= 3;
-    });
-
-    // Usuń rury poza ekranem i zwiększ wynik
-    if (pipes.length && pipes[0].x + pipeWidth < 0) {
-      pipes.shift();
-      score++;
-    }
-
-    // Sprawdź kolizje
-    for (let pipe of pipes) {
-      if (
-        bird.x < pipe.x + pipeWidth &&
-        bird.x + bird.width > pipe.x &&
-        (bird.y < pipe.top || bird.y + bird.height > pipe.top + pipeGap)
-      ) {
-        gameOver = true;
-      }
-    }
-
-    // Sprawdź kolizję z ziemią i niebem
-    if (bird.y + bird.height > canvas.height || bird.y < 0) {
-      gameOver = true;
-    }
-
-    frameCount++;
-  }
-
-  function draw() {
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
-    drawPipes();
-    drawBird();
-    drawScore();
-
-    if (gameOver) {
-      ctx.fillStyle = 'rgba(0,0,0,0.5)';
-      ctx.fillRect(0, 0, canvas.width, canvas.height);
-      ctx.fillStyle = 'white';
-      ctx.font = '48px Arial';
-      ctx.textAlign = 'center';
-      ctx.fillText('Koniec gry!', canvas.width / 2, canvas.height / 2 - 20);
-      ctx.font = '24px Arial';
-      ctx.fillText('Naciśnij SPACJĘ, aby zacząć ponownie', canvas.width / 2, canvas.height / 2 + 20);
-    }
-  }
-
-  function loop() {
-    update();
-    draw();
-    requestAnimationFrame(loop);
-  }
-
-  // Sterowanie
-  window.addEventListener('keydown', e => {
-    if (e.code === 'Space') {
-      if (gameOver) {
-        reset();
-      }
-      bird.velocity = bird.lift;
-    }
-  });
-
-  loop();
-</script>
+  <h1>SIMEA</h1>
+  <button onclick="alert('Następna strona');">Następne</button>
 </body>
 </html>
