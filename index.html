@@ -2,132 +2,124 @@
 <html lang="pl">
 <head>
   <meta charset="UTF-8" />
-  <title>2D Surf Game</title>
+  <title>Surf 3D</title>
   <style>
-    body {
-      margin: 0;
-      overflow: hidden;
-      background: #222;
-    }
-    canvas {
-      display: block;
-      background: #333;
-    }
+    body { margin: 0; overflow: hidden; }
+    canvas { display: block; }
   </style>
 </head>
 <body>
-<canvas id="game" width="800" height="600"></canvas>
+<script src="https://cdn.jsdelivr.net/npm/three@0.158.0/build/three.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.158.0/examples/js/controls/PointerLockControls.js"></script>
 <script>
-const canvas = document.getElementById('game');
-const ctx = canvas.getContext('2d');
+  let scene, camera, renderer, controls;
+  let ramp, velocity = new THREE.Vector3();
+  let gravity = -0.4, speed = 0.2;
+  let onGround = false;
 
-let player = {
-  x: 100,
-  y: 100,
-  radius: 10,
-  vx: 2,
-  vy: 0,
-  onRamp: false,
-  jumpPower: -10
-};
+  init();
+  animate();
 
-const gravity = 0.4;
-const friction = 0.98;
+  function init() {
+    scene = new THREE.Scene();
+    scene.background = new THREE.Color(0x222222);
 
-// Rampy — linie w 2D
-const ramps = [
-  { x1: 50, y1: 400, x2: 300, y2: 500 },
-  { x1: 350, y1: 500, x2: 600, y2: 400 },
-  { x1: 650, y1: 400, x2: 800, y2: 450 },
-];
+    camera = new THREE.PerspectiveCamera(75, window.innerWidth/window.innerHeight, 0.1, 1000);
+    camera.position.set(0, 5, 10);
 
-function drawRamp(ramp) {
-  ctx.strokeStyle = 'lime';
-  ctx.lineWidth = 8;
-  ctx.beginPath();
-  ctx.moveTo(ramp.x1, ramp.y1);
-  ctx.lineTo(ramp.x2, ramp.y2);
-  ctx.stroke();
-}
+    renderer = new THREE.WebGLRenderer();
+    renderer.setSize(window.innerWidth, window.innerHeight);
+    document.body.appendChild(renderer.domElement);
 
-function drawPlayer() {
-  ctx.fillStyle = 'cyan';
-  ctx.beginPath();
-  ctx.arc(player.x, player.y, player.radius, 0, Math.PI * 2);
-  ctx.fill();
-}
+    // Kontroler "surfowy" (Pointer Lock)
+    controls = new THREE.PointerLockControls(camera, document.body);
+    document.body.addEventListener('click', () => controls.lock());
 
-function pointLineDistance(px, py, x1, y1, x2, y2) {
-  const A = px - x1;
-  const B = py - y1;
-  const C = x2 - x1;
-  const D = y2 - y1;
+    scene.add(controls.getObject());
 
-  const dot = A * C + B * D;
-  const lenSq = C * C + D * D;
-  let param = dot / lenSq;
+    // Oświetlenie
+    const light = new THREE.DirectionalLight(0xffffff, 1);
+    light.position.set(5, 10, 7);
+    scene.add(light);
 
-  if (param < 0) param = 0;
-  else if (param > 1) param = 1;
+    // Rampa
+    const rampGeometry = new THREE.BoxGeometry(20, 1, 100);
+    const rampMaterial = new THREE.MeshStandardMaterial({color: 0x00ff88});
+    ramp = new THREE.Mesh(rampGeometry, rampMaterial);
+    ramp.rotation.x = -Math.PI / 12;
+    ramp.position.y = 0;
+    scene.add(ramp);
 
-  const xx = x1 + param * C;
-  const yy = y1 + param * D;
-  const dx = px - xx;
-  const dy = py - yy;
+    // Podłoże
+    const groundGeometry = new THREE.PlaneGeometry(200, 200);
+    const groundMaterial = new THREE.MeshStandardMaterial({color: 0x111111});
+    const ground = new THREE.Mesh(groundGeometry, groundMaterial);
+    ground.rotation.x = -Math.PI / 2;
+    ground.position.y = -10;
+    scene.add(ground);
 
-  return { dist: Math.sqrt(dx * dx + dy * dy), nx: xx, ny: yy };
-}
+    // Ruch
+    const keys = {};
+    document.addEventListener('keydown', e => keys[e.code] = true);
+    document.addEventListener('keyup', e => keys[e.code] = false);
 
-function updatePlayer() {
-  player.vy += gravity;
-  player.x += player.vx;
-  player.y += player.vy;
-  player.onRamp = false;
+    function handleMovement() {
+      if (!controls.isLocked) return;
 
-  for (const ramp of ramps) {
-    const { dist, nx, ny } = pointLineDistance(player.x, player.y, ramp.x1, ramp.y1, ramp.x2, ramp.y2);
-    if (dist < player.radius) {
-      player.onRamp = true;
-      // Przyklejenie do rampy
-      player.y = ny - (player.radius - dist);
-      // Wyrównanie ruchu wzdłuż rampy
-      const angle = Math.atan2(ramp.y2 - ramp.y1, ramp.x2 - ramp.x1);
-      player.vx = Math.cos(angle) * player.vx * friction;
-      player.vy = Math.sin(angle) * player.vx;
+      const direction = new THREE.Vector3();
+      const front = new THREE.Vector3();
+      const side = new THREE.Vector3();
+
+      controls.getDirection(front);
+      front.y = 0;
+      front.normalize();
+
+      side.crossVectors(front, camera.up).normalize();
+
+      if (keys['KeyW']) direction.add(front);
+      if (keys['KeyS']) direction.sub(front);
+      if (keys['KeyA']) direction.sub(side);
+      if (keys['KeyD']) direction.add(side);
+
+      direction.normalize().multiplyScalar(speed);
+      velocity.x = direction.x;
+      velocity.z = direction.z;
+
+      if (onGround && keys['Space']) {
+        velocity.y = 0.12;
+        onGround = false;
+      }
     }
+
+    // Animacja
+    function animateFrame() {
+      handleMovement();
+
+      // Grawitacja
+      if (!onGround) velocity.y += gravity * 0.01;
+
+      // Aktualizacja pozycji kamery
+      controls.getObject().position.add(velocity);
+
+      // Kolizja z rampą (bardzo uproszczona)
+      const camY = controls.getObject().position.y;
+      const camZ = controls.getObject().position.z;
+      const rampHeightAtZ = Math.tan(Math.PI / 12) * (50 - camZ); // bo rampa idzie do przodu
+
+      if (camZ < 50 && camZ > -50 && camY <= rampHeightAtZ + 1.5) {
+        controls.getObject().position.y = rampHeightAtZ + 1.5;
+        velocity.y = 0;
+        onGround = true;
+      } else {
+        onGround = false;
+      }
+
+      renderer.render(scene, camera);
+      requestAnimationFrame(animateFrame);
+    }
+
+    animate = animateFrame;
   }
-
-  if (player.y > canvas.height) {
-    reset();
-  }
-}
-
-function reset() {
-  player.x = 100;
-  player.y = 100;
-  player.vx = 2;
-  player.vy = 0;
-}
-
-function draw() {
-  ctx.clearRect(0, 0, canvas.width, canvas.height);
-  ramps.forEach(drawRamp);
-  drawPlayer();
-}
-
-function loop() {
-  updatePlayer();
-  draw();
-  requestAnimationFrame(loop);
-}
-
-window.addEventListener('keydown', e => {
-  if (e.code === 'Space' && player.onRamp) {
-    player.vy = player.jumpPower;
-  }
-});
-
-loop();
 </script>
 </body>
 </html>
