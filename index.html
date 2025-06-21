@@ -40,6 +40,17 @@
       z-index: 10;
     }
 
+    #centerLabel {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      font-size: 32px;
+      color: white;
+      font-weight: bold;
+      z-index: 20;
+    }
+
     .number {
       position: absolute;
       width: 100%;
@@ -47,8 +58,10 @@
       transform-origin: 50% 50%;
       text-align: center;
       line-height: 280px;
-      font-size: 14px;
+      font-size: 20px;
+      font-weight: bold;
       color: white;
+      text-shadow: 0 0 3px black;
     }
 
     #controls {
@@ -62,7 +75,7 @@
     input, select {
       padding: 8px;
       font-size: 16px;
-      width: 180px;
+      width: 150px;
       text-align: center;
     }
 
@@ -80,19 +93,19 @@
       font-size: 20px;
       margin-top: 10px;
     }
-
   </style>
 </head>
 <body>
 
   <div id="wheel">
     <div id="pointer"></div>
+    <div id="centerLabel"></div>
   </div>
 
   <div id="controls">
     <input type="number" id="betNumber" min="0" max="36" placeholder="Liczba (0–36)" />
     <select id="betColor">
-      <option value="">Brak koloru</option>
+      <option value="">Kolor (opcjonalnie)</option>
       <option value="red">Czerwony</option>
       <option value="black">Czarny</option>
     </select>
@@ -110,41 +123,38 @@
     const betNumberInput = document.getElementById('betNumber');
     const betColorInput = document.getElementById('betColor');
     const betAmountInput = document.getElementById('betAmount');
+    const centerLabel = document.getElementById('centerLabel');
 
     const numbers = Array.from({ length: 37 }, (_, i) => i);
     const anglePerNumber = 360 / numbers.length;
     let balance = 1000;
     let currentAngle = 0;
 
-    // Kolory ruletki (prosty rozkład czerwony/czarny)
-    const colorMap = {};
-    numbers.forEach(num => {
-      if (num === 0) colorMap[num] = 'green';
-      else colorMap[num] = (num % 2 === 0) ? 'black' : 'red';
-    });
+    // Przypisanie kolorów do liczb (wg standardowej ruletki)
+    const redNumbers = [1,3,5,7,9,12,14,16,18,19,21,23,25,27,30,32,34,36];
+    const numberColors = numbers.map(num => redNumbers.includes(num) ? 'red' : (num === 0 ? 'green' : 'black'));
 
     // Dodaj liczby do koła
     numbers.forEach((num, i) => {
       const el = document.createElement('div');
       el.className = 'number';
       el.style.transform = `rotate(${i * anglePerNumber}deg)`;
-      el.style.color = colorMap[num];
       el.textContent = num;
       wheel.appendChild(el);
     });
 
     spinBtn.addEventListener('click', () => {
-      const betNum = betNumberInput.value !== "" ? parseInt(betNumberInput.value) : null;
+      const betNum = parseInt(betNumberInput.value);
       const betColor = betColorInput.value;
       const betAmount = parseInt(betAmountInput.value);
 
-      if (isNaN(betAmount) || betAmount <= 0) {
-        result.textContent = '❌ Podaj poprawną stawkę.';
+      if ((isNaN(betNum) || betNum < 0 || betNum > 36) && betColor === "") {
+        result.textContent = '❌ Podaj poprawną liczbę (0–36) lub wybierz kolor.';
         return;
       }
 
-      if (betNum !== null && (isNaN(betNum) || betNum < 0 || betNum > 36)) {
-        result.textContent = '❌ Podaj poprawną liczbę (0–36).';
+      if (isNaN(betAmount) || betAmount <= 0) {
+        result.textContent = '❌ Podaj poprawną stawkę.';
         return;
       }
 
@@ -153,39 +163,36 @@
         return;
       }
 
-      // Losuj wynik
       const chosenIndex = Math.floor(Math.random() * numbers.length);
       const resultNum = numbers[chosenIndex];
-      const resultColor = colorMap[resultNum];
+      const resultColor = numberColors[chosenIndex];
 
-      const rotation = 360 * 5 + (360 - chosenIndex * anglePerNumber);
+      const rotation = 360 * 5 - chosenIndex * anglePerNumber;
       currentAngle += rotation;
 
       wheel.style.transition = 'transform 4s ease-out';
       wheel.style.transform = `rotate(${currentAngle}deg)`;
+      centerLabel.textContent = ''; // wyczyść
 
       result.textContent = '🎲 Kręcimy...';
       spinBtn.disabled = true;
 
       setTimeout(() => {
-        let winAmount = 0;
-        let winMessages = [];
+        centerLabel.textContent = resultNum;
+        let won = false;
+        let payout = 0;
 
-        // Obstawiona liczba
-        if (betNum !== null && betNum === resultNum) {
-          winAmount += betAmount * 35;
-          winMessages.push(`🎯 Trafiona liczba ${resultNum} (+${betAmount * 35} zł)`);
+        if (!isNaN(betNum) && betNum === resultNum) {
+          payout = betAmount * 35;
+          won = true;
+        } else if (betColor && betColor === resultColor) {
+          payout = betAmount * 2;
+          won = true;
         }
 
-        // Obstawiony kolor
-        if (betColor && resultColor === betColor) {
-          winAmount += betAmount;
-          winMessages.push(`🎨 Trafiony kolor ${resultColor} (+${betAmount} zł)`);
-        }
-
-        if (winAmount > 0) {
-          balance += winAmount;
-          result.textContent = `${winMessages.join(' | ')}\nSaldo +${winAmount} zł`;
+        if (won) {
+          balance += payout;
+          result.textContent = `🎉 Wypadło ${resultNum} (${resultColor})! Wygrywasz ${payout} zł!`;
         } else {
           balance -= betAmount;
           result.textContent = `💔 Wypadło ${resultNum} (${resultColor}). Przegrywasz ${betAmount} zł.`;
