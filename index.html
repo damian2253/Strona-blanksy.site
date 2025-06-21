@@ -24,6 +24,7 @@
       position: relative;
       background: radial-gradient(circle, #222, #000);
       margin-bottom: 20px;
+      overflow: hidden;
     }
 
     #pointer {
@@ -36,6 +37,7 @@
       top: -30px;
       left: 50%;
       transform: translateX(-50%);
+      z-index: 10;
     }
 
     .number {
@@ -46,6 +48,7 @@
       text-align: center;
       line-height: 280px;
       font-size: 14px;
+      color: white;
     }
 
     #controls {
@@ -56,10 +59,10 @@
       margin-bottom: 20px;
     }
 
-    input {
+    input, select {
       padding: 8px;
       font-size: 16px;
-      width: 150px;
+      width: 180px;
       text-align: center;
     }
 
@@ -88,6 +91,11 @@
 
   <div id="controls">
     <input type="number" id="betNumber" min="0" max="36" placeholder="Liczba (0–36)" />
+    <select id="betColor">
+      <option value="">Brak koloru</option>
+      <option value="red">Czerwony</option>
+      <option value="black">Czarny</option>
+    </select>
     <input type="number" id="betAmount" min="1" placeholder="Stawka (np. 100)" />
     <button id="spin">Zakręć</button>
     <div id="balance">Saldo: 1000 zł</div>
@@ -100,33 +108,43 @@
     const balanceDisplay = document.getElementById('balance');
     const spinBtn = document.getElementById('spin');
     const betNumberInput = document.getElementById('betNumber');
+    const betColorInput = document.getElementById('betColor');
     const betAmountInput = document.getElementById('betAmount');
 
-    const numbers = Array.from({length: 37}, (_, i) => i);
+    const numbers = Array.from({ length: 37 }, (_, i) => i);
     const anglePerNumber = 360 / numbers.length;
     let balance = 1000;
     let currentAngle = 0;
+
+    // Kolory ruletki (prosty rozkład czerwony/czarny)
+    const colorMap = {};
+    numbers.forEach(num => {
+      if (num === 0) colorMap[num] = 'green';
+      else colorMap[num] = (num % 2 === 0) ? 'black' : 'red';
+    });
 
     // Dodaj liczby do koła
     numbers.forEach((num, i) => {
       const el = document.createElement('div');
       el.className = 'number';
       el.style.transform = `rotate(${i * anglePerNumber}deg)`;
+      el.style.color = colorMap[num];
       el.textContent = num;
       wheel.appendChild(el);
     });
 
     spinBtn.addEventListener('click', () => {
-      const betNum = parseInt(betNumberInput.value);
+      const betNum = betNumberInput.value !== "" ? parseInt(betNumberInput.value) : null;
+      const betColor = betColorInput.value;
       const betAmount = parseInt(betAmountInput.value);
-
-      if (isNaN(betNum) || betNum < 0 || betNum > 36) {
-        result.textContent = '❌ Podaj poprawną liczbę (0–36).';
-        return;
-      }
 
       if (isNaN(betAmount) || betAmount <= 0) {
         result.textContent = '❌ Podaj poprawną stawkę.';
+        return;
+      }
+
+      if (betNum !== null && (isNaN(betNum) || betNum < 0 || betNum > 36)) {
+        result.textContent = '❌ Podaj poprawną liczbę (0–36).';
         return;
       }
 
@@ -137,6 +155,9 @@
 
       // Losuj wynik
       const chosenIndex = Math.floor(Math.random() * numbers.length);
+      const resultNum = numbers[chosenIndex];
+      const resultColor = colorMap[resultNum];
+
       const rotation = 360 * 5 + (360 - chosenIndex * anglePerNumber);
       currentAngle += rotation;
 
@@ -147,14 +168,27 @@
       spinBtn.disabled = true;
 
       setTimeout(() => {
-        const resultNum = numbers[chosenIndex];
-        if (resultNum === betNum) {
-          const win = betAmount * 35;
-          balance += win;
-          result.textContent = `🎉 Trafiłeś ${resultNum}! Wygrywasz ${win} zł!`;
+        let winAmount = 0;
+        let winMessages = [];
+
+        // Obstawiona liczba
+        if (betNum !== null && betNum === resultNum) {
+          winAmount += betAmount * 35;
+          winMessages.push(`🎯 Trafiona liczba ${resultNum} (+${betAmount * 35} zł)`);
+        }
+
+        // Obstawiony kolor
+        if (betColor && resultColor === betColor) {
+          winAmount += betAmount;
+          winMessages.push(`🎨 Trafiony kolor ${resultColor} (+${betAmount} zł)`);
+        }
+
+        if (winAmount > 0) {
+          balance += winAmount;
+          result.textContent = `${winMessages.join(' | ')}\nSaldo +${winAmount} zł`;
         } else {
           balance -= betAmount;
-          result.textContent = `💔 Wypadło ${resultNum}. Przegrywasz ${betAmount} zł.`;
+          result.textContent = `💔 Wypadło ${resultNum} (${resultColor}). Przegrywasz ${betAmount} zł.`;
         }
 
         balanceDisplay.textContent = `Saldo: ${balance} zł`;
