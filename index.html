@@ -1,156 +1,133 @@
 <!DOCTYPE html>
 <html lang="pl">
 <head>
-<meta charset="UTF-8" />
-<title>Flappy Bird - Prosty Klon</title>
-<style>
-  body {
-    margin: 0;
-    overflow: hidden;
-    background: #70c5ce;
-  }
-  canvas {
-    display: block;
-    margin: 0 auto;
-    background: #70c5ce;
-  }
-</style>
+  <meta charset="UTF-8" />
+  <title>2D Surf Game</title>
+  <style>
+    body {
+      margin: 0;
+      overflow: hidden;
+      background: #222;
+    }
+    canvas {
+      display: block;
+      background: #333;
+    }
+  </style>
 </head>
 <body>
-<canvas id="game" width="4000" height="6000"></canvas>
-
+<canvas id="game" width="800" height="600"></canvas>
 <script>
-  const canvas = document.getElementById('game');
-  const ctx = canvas.getContext('2d');
+const canvas = document.getElementById('game');
+const ctx = canvas.getContext('2d');
 
-  const bird = {
-    x: 50,
-    y: 150,
-    width: 34,
-    height: 24,
-    gravity: 0.6,
-    lift: -10,
-    velocity: 0,
-  };
+let player = {
+  x: 100,
+  y: 100,
+  radius: 10,
+  vx: 2,
+  vy: 0,
+  onRamp: false,
+  jumpPower: -10
+};
 
-  const pipes = [];
-  const pipeWidth = 60;
-  const pipeGap = 150;
-  let frameCount = 0;
-  let score = 0;
-  let gameOver = false;
+const gravity = 0.4;
+const friction = 0.98;
 
-  function reset() {
-    bird.y = 150;
-    bird.velocity = 0;
-    pipes.length = 0;
-    score = 0;
-    frameCount = 0;
-    gameOver = false;
-  }
+// Rampy — linie w 2D
+const ramps = [
+  { x1: 50, y1: 400, x2: 300, y2: 500 },
+  { x1: 350, y1: 500, x2: 600, y2: 400 },
+  { x1: 650, y1: 400, x2: 800, y2: 450 },
+];
 
-  function drawBird() {
-    ctx.fillStyle = 'yellow';
-    ctx.fillRect(bird.x, bird.y, bird.width, bird.height);
-    ctx.strokeStyle = 'orange';
-    ctx.strokeRect(bird.x, bird.y, bird.width, bird.height);
-  }
+function drawRamp(ramp) {
+  ctx.strokeStyle = 'lime';
+  ctx.lineWidth = 8;
+  ctx.beginPath();
+  ctx.moveTo(ramp.x1, ramp.y1);
+  ctx.lineTo(ramp.x2, ramp.y2);
+  ctx.stroke();
+}
 
-  function drawPipes() {
-    ctx.fillStyle = 'green';
-    pipes.forEach(pipe => {
-      // górna rura
-      ctx.fillRect(pipe.x, 0, pipeWidth, pipe.top);
-      // dolna rura
-      ctx.fillRect(pipe.x, pipe.top + pipeGap, pipeWidth, canvas.height - pipe.top - pipeGap);
-    });
-  }
+function drawPlayer() {
+  ctx.fillStyle = 'cyan';
+  ctx.beginPath();
+  ctx.arc(player.x, player.y, player.radius, 0, Math.PI * 2);
+  ctx.fill();
+}
 
-  function drawScore() {
-    ctx.fillStyle = 'white';
-    ctx.font = '24px Arial';
-    ctx.fillText(`Wynik: ${score}`, 10, 30);
-  }
+function pointLineDistance(px, py, x1, y1, x2, y2) {
+  const A = px - x1;
+  const B = py - y1;
+  const C = x2 - x1;
+  const D = y2 - y1;
 
-  function update() {
-    if (gameOver) return;
+  const dot = A * C + B * D;
+  const lenSq = C * C + D * D;
+  let param = dot / lenSq;
 
-    // Dodaj grawitację
-    bird.velocity += bird.gravity;
-    bird.y += bird.velocity;
+  if (param < 0) param = 0;
+  else if (param > 1) param = 1;
 
-    // Dodaj nowe rury co 90 klatek (~1.5s)
-    if (frameCount % 90 === 0) {
-      const topHeight = Math.random() * (canvas.height - pipeGap - 100) + 50;
-      pipes.push({x: canvas.width, top: topHeight});
-    }
+  const xx = x1 + param * C;
+  const yy = y1 + param * D;
+  const dx = px - xx;
+  const dy = py - yy;
 
-    // Przesuwaj rury
-    pipes.forEach(pipe => {
-      pipe.x -= 3;
-    });
+  return { dist: Math.sqrt(dx * dx + dy * dy), nx: xx, ny: yy };
+}
 
-    // Usuń rury poza ekranem i zwiększ wynik
-    if (pipes.length && pipes[0].x + pipeWidth < 0) {
-      pipes.shift();
-      score++;
-    }
+function updatePlayer() {
+  player.vy += gravity;
+  player.x += player.vx;
+  player.y += player.vy;
+  player.onRamp = false;
 
-    // Sprawdź kolizje
-    for (let pipe of pipes) {
-      if (
-        bird.x < pipe.x + pipeWidth &&
-        bird.x + bird.width > pipe.x &&
-        (bird.y < pipe.top || bird.y + bird.height > pipe.top + pipeGap)
-      ) {
-        gameOver = true;
-      }
-    }
-
-    // Sprawdź kolizję z ziemią i niebem
-    if (bird.y + bird.height > canvas.height || bird.y < 0) {
-      gameOver = true;
-    }
-
-    frameCount++;
-  }
-
-  function draw() {
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
-    drawPipes();
-    drawBird();
-    drawScore();
-
-    if (gameOver) {
-      ctx.fillStyle = 'rgba(0,0,0,0.5)';
-      ctx.fillRect(0, 0, canvas.width, canvas.height);
-      ctx.fillStyle = 'white';
-      ctx.font = '48px Arial';
-      ctx.textAlign = 'center';
-      ctx.fillText('Koniec gry!', canvas.width / 2, canvas.height / 2 - 20);
-      ctx.font = '24px Arial';
-      ctx.fillText('Naciśnij SPACJĘ, aby zacząć ponownie', canvas.width / 2, canvas.height / 2 + 20);
+  for (const ramp of ramps) {
+    const { dist, nx, ny } = pointLineDistance(player.x, player.y, ramp.x1, ramp.y1, ramp.x2, ramp.y2);
+    if (dist < player.radius) {
+      player.onRamp = true;
+      // Przyklejenie do rampy
+      player.y = ny - (player.radius - dist);
+      // Wyrównanie ruchu wzdłuż rampy
+      const angle = Math.atan2(ramp.y2 - ramp.y1, ramp.x2 - ramp.x1);
+      player.vx = Math.cos(angle) * player.vx * friction;
+      player.vy = Math.sin(angle) * player.vx;
     }
   }
 
-  function loop() {
-    update();
-    draw();
-    requestAnimationFrame(loop);
+  if (player.y > canvas.height) {
+    reset();
   }
+}
 
-  // Sterowanie
-  window.addEventListener('keydown', e => {
-    if (e.code === 'Space') {
-      if (gameOver) {
-        reset();
-      }
-      bird.velocity = bird.lift;
-    }
-  });
+function reset() {
+  player.x = 100;
+  player.y = 100;
+  player.vx = 2;
+  player.vy = 0;
+}
 
-  loop();
+function draw() {
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+  ramps.forEach(drawRamp);
+  drawPlayer();
+}
+
+function loop() {
+  updatePlayer();
+  draw();
+  requestAnimationFrame(loop);
+}
+
+window.addEventListener('keydown', e => {
+  if (e.code === 'Space' && player.onRamp) {
+    player.vy = player.jumpPower;
+  }
+});
+
+loop();
 </script>
 </body>
 </html>
-
