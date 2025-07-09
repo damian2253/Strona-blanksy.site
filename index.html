@@ -1,65 +1,96 @@
 <!DOCTYPE html>
 <html lang="pl">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Damian ma rację</title>
+  <meta charset="UTF-8">
+  <title>Pianinowy Step Sequencer</title>
+  <script src="https://unpkg.com/tone@latest/build/Tone.js"></script>
   <style>
     body {
-      margin: 0;
-      font-family: Arial, sans-serif;
-      scroll-behavior: smooth;
-    }
-
-    .container {
-      height: 100vh;
-      display: flex;
-      justify-content: center;
-      align-items: center;
-      flex-direction: column;
-      background-color: #e0f7fa;
-    }
-
-    button {
-      padding: 15px 25px;
-      font-size: 1.2rem;
-      background-color: #00796b;
+      font-family: sans-serif;
+      text-align: center;
+      background: #1e1e1e;
       color: white;
-      border: none;
-      border-radius: 8px;
+    }
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(8, 40px);
+      grid-gap: 4px;
+      margin: 20px auto;
+      width: max-content;
+    }
+    .cell {
+      width: 40px;
+      height: 40px;
+      background: #333;
+      border: 1px solid #444;
       cursor: pointer;
-      transition: background-color 0.3s;
     }
-
-    button:hover {
-      background-color: #004d40;
+    .cell.active {
+      background: #4caf50;
     }
-
-    #target {
-      height: 100vh;
-      display: flex;
-      justify-content: center;
-      align-items: center;
-      background-color: #fce4ec;
-    }
-
-    #target h1 {
-      font-size: 3rem;
-      color: #880e4f;
+    button {
+      margin-top: 20px;
+      padding: 10px 20px;
+      font-size: 16px;
     }
   </style>
 </head>
 <body>
+  <h1>🎹 Pianinowy Step Sequencer</h1>
+  <div class="grid" id="grid"></div>
+  <button onclick="togglePlay()">
+    ▶️ Play / Pause
+  </button>
 
-  <div class="container">
-    <button onclick="document.getElementById('target').scrollIntoView({ behavior: 'smooth' });">
-      Kliknij mnie
-    </button>
-  </div>
+  <script>
+    const rows = 8;
+    const cols = 8;
+    const notes = ["C5", "B4", "A4", "G4", "F4", "E4", "D4", "C4"];
+    const grid = [];
+    let isPlaying = false;
+    let currentCol = 0;
 
-  <div id="target">
-    <h1>Jeśli to czytasz to jesteś w złej części internetu</h1>
-  </div>
+    const gridContainer = document.getElementById('grid');
 
+    // Tworzymy siatkę
+    for (let y = 0; y < rows; y++) {
+      grid[y] = [];
+      for (let x = 0; x < cols; x++) {
+        const cell = document.createElement('div');
+        cell.classList.add('cell');
+        cell.dataset.x = x;
+        cell.dataset.y = y;
+        cell.addEventListener('click', () => {
+          cell.classList.toggle('active');
+        });
+        gridContainer.appendChild(cell);
+        grid[y][x] = cell;
+      }
+    }
+
+    const synth = new Tone.PolySynth(Tone.Synth).toDestination();
+    const loop = new Tone.Loop(time => {
+      for (let y = 0; y < rows; y++) {
+        const cell = grid[y][currentCol];
+        if (cell.classList.contains('active')) {
+          synth.triggerAttackRelease(notes[y], "8n", time);
+        }
+      }
+      currentCol = (currentCol + 1) % cols;
+    }, "8n");
+
+    async function togglePlay() {
+      await Tone.start();
+      isPlaying = !isPlaying;
+      if (isPlaying) {
+        Tone.Transport.start();
+        loop.start(0);
+      } else {
+        Tone.Transport.stop();
+        loop.stop();
+        currentCol = 0;
+      }
+    }
+  </script>
 </body>
 </html>
