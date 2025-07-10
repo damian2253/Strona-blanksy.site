@@ -2,7 +2,7 @@
 <html lang="pl">
 <head>
   <meta charset="UTF-8">
-  <title>Pianinowy Step Sequencer</title>
+  <title>Dynamiczny Pianinowy Step Sequencer</title>
   <script src="https://unpkg.com/tone@latest/build/Tone.js"></script>
   <style>
     body {
@@ -11,9 +11,11 @@
       background: #1e1e1e;
       color: white;
     }
+    .controls {
+      margin: 10px;
+    }
     .grid {
       display: grid;
-      grid-template-columns: repeat(8, 40px);
       grid-gap: 4px;
       margin: 20px auto;
       width: max-content;
@@ -29,55 +31,119 @@
       background: #4caf50;
     }
     button {
-      margin-top: 20px;
-      padding: 10px 20px;
-      font-size: 16px;
+      margin: 5px;
+      padding: 8px 16px;
+      font-size: 14px;
     }
   </style>
 </head>
 <body>
-  <h1>🎹 Pianinowy Step Sequencer</h1>
-  <div class="grid" id="grid"></div>
-  <button onclick="togglePlay()">
-    ▶️ Play / Pause
-  </button>
+  <h1>🎹 Dynamiczny Step Sequencer</h1>
+
+  <div class="controls">
+    <button onclick="addColumn()">➕ Kolumna</button>
+    <button onclick="addRow()">➕ Rząd</button>
+    <button onclick="togglePlay()">▶️ Play / Pause</button>
+  </div>
+
+  <div id="grid" class="grid"></div>
 
   <script>
-    const rows = 8;
-    const cols = 8;
-    const notes = ["C5", "B4", "A4", "G4", "F4", "E4", "D4", "C4"];
-    const grid = [];
-    let isPlaying = false;
+    let rows = 8;
+    let cols = 8;
     let currentCol = 0;
+    let isPlaying = false;
 
+    const baseNotes = ["C5", "B4", "A4", "G4", "F4", "E4", "D4", "C4"];
+    const allNotes = [...baseNotes];
+    const grid = [];
     const gridContainer = document.getElementById('grid');
-
-    // Tworzymy siatkę
-    for (let y = 0; y < rows; y++) {
-      grid[y] = [];
-      for (let x = 0; x < cols; x++) {
-        const cell = document.createElement('div');
-        cell.classList.add('cell');
-        cell.dataset.x = x;
-        cell.dataset.y = y;
-        cell.addEventListener('click', () => {
-          cell.classList.toggle('active');
-        });
-        gridContainer.appendChild(cell);
-        grid[y][x] = cell;
-      }
-    }
 
     const synth = new Tone.PolySynth(Tone.Synth).toDestination();
     const loop = new Tone.Loop(time => {
       for (let y = 0; y < rows; y++) {
         const cell = grid[y][currentCol];
-        if (cell.classList.contains('active')) {
-          synth.triggerAttackRelease(notes[y], "8n", time);
+        if (cell && cell.classList.contains('active')) {
+          synth.triggerAttackRelease(allNotes[y], "8n", time);
         }
       }
       currentCol = (currentCol + 1) % cols;
     }, "8n");
+
+    function createGrid() {
+      gridContainer.innerHTML = '';
+      gridContainer.style.gridTemplateColumns = `repeat(${cols}, 40px)`;
+
+      for (let y = 0; y < rows; y++) {
+        for (let x = 0; x < cols; x++) {
+          const cell = document.createElement('div');
+          cell.classList.add('cell');
+          cell.dataset.x = x;
+          cell.dataset.y = y;
+          cell.addEventListener('click', () => {
+            cell.classList.toggle('active');
+          });
+          gridContainer.appendChild(cell);
+
+          if (!grid[y]) grid[y] = [];
+          grid[y][x] = cell;
+        }
+      }
+    }
+
+    function addColumn() {
+      cols++;
+      for (let y = 0; y < rows; y++) {
+        const cell = document.createElement('div');
+        cell.classList.add('cell');
+        cell.dataset.x = cols - 1;
+        cell.dataset.y = y;
+        cell.addEventListener('click', () => {
+          cell.classList.toggle('active');
+        });
+        gridContainer.appendChild(cell);
+        grid[y].push(cell);
+      }
+      gridContainer.style.gridTemplateColumns = `repeat(${cols}, 40px)`;
+    }
+
+    function addRow() {
+      rows++;
+      // Generuj nową nutę
+      const nextNote = getNextNote();
+      allNotes.push(nextNote);
+      const row = [];
+      for (let x = 0; x < cols; x++) {
+        const cell = document.createElement('div');
+        cell.classList.add('cell');
+        cell.dataset.x = x;
+        cell.dataset.y = rows - 1;
+        cell.addEventListener('click', () => {
+          cell.classList.toggle('active');
+        });
+        gridContainer.appendChild(cell);
+        row.push(cell);
+      }
+      grid.push(row);
+    }
+
+    function getNextNote() {
+      // Prosta logika: C4, B3, A3...
+      const last = allNotes[allNotes.length - 1];
+      const pitch = last[0];
+      const octave = parseInt(last.slice(1), 10);
+      const order = ['C', 'B', 'A', 'G', 'F', 'E', 'D'];
+
+      let i = order.indexOf(pitch) + 1;
+      let newOct = octave;
+
+      if (i >= order.length) {
+        i = 0;
+        newOct--;
+      }
+
+      return `${order[i]}${newOct}`;
+    }
 
     async function togglePlay() {
       await Tone.start();
@@ -91,6 +157,8 @@
         currentCol = 0;
       }
     }
+
+    createGrid(); // Inicjalizacja
   </script>
 </body>
 </html>
